@@ -4,6 +4,7 @@ import win32api
 from tkinter import messagebox
 import ctypes
 import sys
+import traceback
 
 
 def is_admin():
@@ -53,10 +54,11 @@ try:
                 None,  # Senha da conta de serviço (não alterar)
                 None,  # Nome de exibição (não alterar)                
             )
-        if win32service.QueryServiceConfig(service_name)[1] == win32service.SERVICE_DISABLED:
+        if win32service.QueryServiceConfig(service_handle)[1] == win32service.SERVICE_DISABLED:
             messagebox.showerror("Erro", f"Não foi possível habilitar o serviço {service_name}.")
             sys.exit(1)
         messagebox.showinfo(message=f"Serviço {service_name} habilitado com sucesso.")
+
 
     # Se o serviço não estiver em execução, inicia o serviço
     if serviceStatus[1] != win32service.SERVICE_RUNNING:
@@ -70,6 +72,8 @@ try:
     serviceStatus = win32serviceutil.QueryServiceStatus(service_name)
     messagebox.showinfo(message=f"Status do serviço {service_name} após a inicialização: {serviceStatus}")
 except Exception as e:
+    #pega a linha que deu erro    
+    messagebox.showerror("Erro", traceback.format_exc())
     messagebox.showerror("Erro", str(e))
 finally:
     # Fecha os handles
