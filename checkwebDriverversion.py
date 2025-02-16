@@ -3,7 +3,8 @@ import re
 import sys
 from win32api import *
 
-
+## TODO: Implementar para outros sistemas operacionais
+## TODO: fazer o download do webdriver automaticamente caso as versões não sejam compatíveis
 
 def get_version_number(file_path): 
     File_information = GetFileVersionInfo(file_path, "\\") 
