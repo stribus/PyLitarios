@@ -1,0 +1,6 @@
+pywin32
+pyautogui
+pillow
+pyperclip
+keyboard
+pyinstaller
