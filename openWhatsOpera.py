@@ -1,4 +1,4 @@
-import pyautogui
+import pyautogui as pg
 import base64
 import io
 from PIL import Image
@@ -13,7 +13,7 @@ def b64_to_img(b64):
 botaoWhats = b64_to_img(botaoWhatsB64)
 
 
-x, y = pyautogui.locateCenterOnScreen(botaoWhats, confidence=0.9)
+x, y = pg.locateCenterOnScreen(botaoWhats, confidence=0.9)
 
 if x is not None and y is not None:
     print(f"Botão encontrado em {x}, {y}")
@@ -21,8 +21,7 @@ else:
     print("Botão não encontrado")
     exit()
     
-pyautogui.moveTo(x, y)
-pyautogui.click()
-time.sleep(2)
-pyautogui.click()
-# pyautogui.click()
+pg.moveTo(x, y, duration=1)
+pg.mouseDown(duration=2)
+pg.mouseUp()
+
