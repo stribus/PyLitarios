@@ -1,6 +1,2 @@
-pywin32
-pyautogui
-pillow
-pyperclip
-keyboard
-pyinstaller
+pywin32==311
+pyinstaller==6.16.0
