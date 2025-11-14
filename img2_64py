@@ -1,0 +1,199 @@
+import tkinter as tk
+from tkinter import filedialog, messagebox
+from tkinter import ttk
+from tkinter.scrolledtext import ScrolledText
+from PIL import Image, ImageGrab, ImageTk
+import base64
+import pyperclip
+import io
+import os
+
+
+MIME_MAP = {
+	'PNG': 'image/png',
+	'JPEG': 'image/jpeg',
+	'JPG': 'image/jpeg',
+	'GIF': 'image/gif',
+	'BMP': 'image/bmp',
+	'WEBP': 'image/webp',
+}
+
+
+def get_mime_from_image(img, path=None):
+	fmt = None
+	if hasattr(img, 'format') and img.format:
+		fmt = img.format
+	if not fmt and path:
+		fmt = os.path.splitext(path)[1].lstrip('.')
+	# normalize to uppercase string (ensure not None)
+	fmt = (fmt or '').upper()
+	return MIME_MAP.get(fmt, 'image/png')
+
+
+class Img2Base64App(tk.Tk):
+	def __init__(self):
+		super().__init__()
+		self.title('Img → Base64')
+		self.geometry('900x600')
+		self._image = None
+		self._photo = None
+		self._base64 = ''
+		self._html = ''
+		self._img_path = None
+		self._mime = 'image/png'
+		self.create_widgets()
+
+	def create_widgets(self):
+		frm = ttk.Frame(self)
+		frm.pack(fill='both', expand=True, padx=8, pady=8)
+
+		top = ttk.Frame(frm)
+		top.pack(side='top', fill='x')
+
+		btn_open = ttk.Button(top, text='Selecionar imagem', command=self.select_image)
+		btn_open.pack(side='left')
+
+		btn_clip = ttk.Button(top, text='Colar (clipboard)', command=self.paste_from_clipboard)
+		btn_clip.pack(side='left', padx=(6, 0))
+
+		btn_copy_all = ttk.Button(top, text='Copiar HTML', command=self.copy_html)
+		btn_copy_all.pack(side='right')
+
+		btn_copy_b64 = ttk.Button(top, text='Copiar Base64', command=self.copy_base64)
+		btn_copy_b64.pack(side='right', padx=(0, 6))
+
+		body = ttk.Panedwindow(frm, orient='horizontal')
+		body.pack(fill='both', expand=True, pady=8)
+
+		left = ttk.Frame(body, width=300)
+		body.add(left, weight=1)
+
+		right = ttk.Frame(body)
+		body.add(right, weight=3)
+
+		# preview
+		preview_lbl = ttk.Label(left, text='Pré-visualização')
+		preview_lbl.pack(anchor='w')
+		self.preview = ttk.Label(left)
+		self.preview.pack(fill='both', expand=True, pady=6)
+
+		info = ttk.Label(left, text='Formato: - | Tamanho: -')
+		info.pack(anchor='w')
+		self.info_label = info
+
+		# Text areas
+		tk.Label(right, text='Base64 (puro)').pack(anchor='w')
+		self.txt_b64 = ScrolledText(right, wrap='none', height=12)
+		self.txt_b64.pack(fill='both', expand=True)
+
+		tk.Label(right, text='Tag HTML (data URI)').pack(anchor='w', pady=(8, 0))
+		self.txt_html = ScrolledText(right, wrap='none', height=6)
+		self.txt_html.pack(fill='both', expand=True)
+
+		# status
+		self.status = ttk.Label(self, text='Pronto')
+		self.status.pack(side='bottom', fill='x')
+
+	def select_image(self):
+		path = filedialog.askopenfilename(title='Selecione uma imagem', filetypes=[
+			('Imagens', '*.png *.jpg *.jpeg *.gif *.bmp *.webp'),
+			('Todos os arquivos', '*.*')
+		])
+		if not path:
+			return
+		try:
+			img = Image.open(path)
+		except Exception as e:
+			messagebox.showerror('Erro', f'Não foi possível abrir a imagem: {e}')
+			return
+		self._img_path = path
+		self.load_image(img, path)
+
+	def paste_from_clipboard(self):
+		img = ImageGrab.grabclipboard()
+		if img is None:
+			messagebox.showinfo('Clipboard', 'Clipboard não contém imagem.')
+			return
+		# If clipboard returns list of filenames
+		if isinstance(img, list):
+			# try open first path
+			try:
+				img = Image.open(img[0])
+			except Exception:
+				messagebox.showerror('Erro', 'Não foi possível abrir o arquivo do clipboard.')
+				return
+			self._img_path = img.filename
+		else:
+			# PIL Image instance
+			self._img_path = None
+		self.load_image(img, self._img_path)
+
+	def load_image(self, img: Image.Image, path=None):
+		self._image = img
+		self._mime = get_mime_from_image(img, path)
+
+		# create preview
+		preview = img.copy()
+		preview.thumbnail((300, 300))
+		self._photo = ImageTk.PhotoImage(preview)
+		self.preview.configure(image=self._photo)
+
+		# update info
+		self.info_label.configure(text=f'Formato: {getattr(img, "format", "-")} | Tamanho: {img.width}x{img.height}')
+
+		# encode
+		buf = io.BytesIO()
+		# prefer original format when possible
+		fmt = getattr(img, 'format', None) or 'PNG'
+		try:
+			img.save(buf, format=fmt)
+		except Exception:
+			# fallback
+			buf = io.BytesIO()
+			img.save(buf, format='PNG')
+			fmt = 'PNG'
+			self._mime = get_mime_from_image(img, path)
+
+		b = buf.getvalue()
+		b64 = base64.b64encode(b).decode('ascii')
+		self._base64 = b64
+		self._html = f'<image xlink:href="data:{self._mime};base64,{b64}"/>'
+
+		# fill text widgets
+		self.txt_b64.delete('1.0', 'end')
+		self.txt_b64.insert('1.0', self._base64)
+		self.txt_html.delete('1.0', 'end')
+		self.txt_html.insert('1.0', self._html)
+
+		self.status.configure(text='Imagem carregada')
+
+	def copy_base64(self):
+		txt = self.txt_b64.get('1.0', 'end').strip()
+		if not txt:
+			messagebox.showinfo('Vazio', 'Nenhum Base64 para copiar')
+			return
+		try:
+			pyperclip.copy(txt)
+			self.status.configure(text='Base64 copiado para a área de transferência')
+		except Exception as e:
+			messagebox.showerror('Erro', f'Não foi possível copiar: {e}')
+
+	def copy_html(self):
+		txt = self.txt_html.get('1.0', 'end').strip()
+		if not txt:
+			messagebox.showinfo('Vazio', 'Nenhuma tag HTML para copiar')
+			return
+		try:
+			pyperclip.copy(txt)
+			self.status.configure(text='Tag HTML copiada para a área de transferência')
+		except Exception as e:
+			messagebox.showerror('Erro', f'Não foi possível copiar: {e}')
+
+
+def main():
+	app = Img2Base64App()
+	app.mainloop()
+
+
+if __name__ == '__main__':
+	main()

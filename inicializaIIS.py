@@ -132,34 +132,39 @@ class IISInitApp(tk.Tk):
     
     def restart_service(self):
         try:
-            # Abre gerenciador de serviços
-            scm_handle = win32service.OpenSCManager(
-                None, None, win32service.SC_MANAGER_ALL_ACCESS
-            )
-            service_handle = win32service.OpenService(
-                scm_handle, self.service_name, win32service.SERVICE_ALL_ACCESS
-            )
+            # # Abre gerenciador de serviços
+            # scm_handle = win32service.OpenSCManager(
+            #     None, None, win32service.SC_MANAGER_ALL_ACCESS
+            # )
+            # service_handle = win32service.OpenService(
+            #     scm_handle, self.service_name, win32service.SERVICE_ALL_ACCESS
+            # )
             
-            if service_handle == 0:
-                return False
+            # if service_handle == 0:
+            #     return False
             
-            # Verifica se está habilitado
-            serviceConfig = win32service.QueryServiceConfig(service_handle)
-            if serviceConfig[1] == win32service.SERVICE_DISABLED:
-                # Habilita o serviço
-                win32service.ChangeServiceConfig(
-                    service_handle,
-                    win32service.SERVICE_NO_CHANGE,
-                    win32service.SERVICE_AUTO_START,
-                    win32service.SERVICE_NO_CHANGE,
-                    None, None, False, None, None, None, None
-                )
+            # # Verifica se está habilitado
+            # serviceConfig = win32service.QueryServiceConfig(service_handle)
+            # if serviceConfig[1] == win32service.SERVICE_DISABLED:
+            #     # Habilita o serviço
+            #     win32service.ChangeServiceConfig(
+            #         service_handle,
+            #         win32service.SERVICE_NO_CHANGE,
+            #         win32service.SERVICE_AUTO_START,
+            #         win32service.SERVICE_NO_CHANGE,
+            #         None, None, False, None, None, None, None
+            #     )
             
-            # Inicia o serviço
-            win32serviceutil.StartService(self.service_name)
+            # # Inicia o serviço
+            # win32serviceutil.StartService(self.service_name)
             
-            win32service.CloseServiceHandle(service_handle)
-            win32service.CloseServiceHandle(scm_handle)
+            # win32service.CloseServiceHandle(service_handle)
+            # win32service.CloseServiceHandle(scm_handle)
+            
+            for i, step in enumerate(self.steps):
+                self.check_vars[i].set("[ ]")
+                
+            self.run_steps()
             
             return True
             
@@ -176,10 +181,10 @@ class IISInitApp(tk.Tk):
             return
         self.mark_step(0)
         self.update()
-        service_name = "W3SVC"
+        
         try:
             # Verifica status do serviço
-            serviceStatus = win32serviceutil.QueryServiceStatus(service_name)
+            serviceStatus = win32serviceutil.QueryServiceStatus(self.service_name)
             self.mark_step(1)
             self.update()
 
@@ -188,10 +193,10 @@ class IISInitApp(tk.Tk):
                 None, None, win32service.SC_MANAGER_ALL_ACCESS
             )
             service_handle = win32service.OpenService(
-                scm_handle, service_name, win32service.SERVICE_ALL_ACCESS
+                scm_handle, self.service_name, win32service.SERVICE_ALL_ACCESS
             )
             if service_handle == 0:
-                self.result_label.config(text=f"Não foi possível abrir o serviço {service_name}.", fg="red")
+                self.result_label.config(text=f"Não foi possível abrir o serviço {self.service_name}.", fg="red")
                 self.mark_step(2, False)
                 self.ok_btn.config(state="normal")
                 return
@@ -200,7 +205,7 @@ class IISInitApp(tk.Tk):
             serviceConfig = win32service.QueryServiceConfig(service_handle)
             if serviceConfig[1] == win32service.SERVICE_DISABLED:
                 self.mark_step(2)
-                self.result_label.config(text=f"Habilitando o serviço {service_name}...")
+                self.result_label.config(text=f"Habilitando o serviço {self.service_name}...")
                 self.update()
                 win32service.ChangeServiceConfig(
                     service_handle,
@@ -210,13 +215,13 @@ class IISInitApp(tk.Tk):
                     None, None, False, None, None, None, None
                 )
                 if win32service.QueryServiceConfig(service_handle)[1] == win32service.SERVICE_DISABLED:
-                    self.result_label.config(text=f"Não foi possível habilitar o serviço {service_name}.", fg="red")
+                    self.result_label.config(text=f"Não foi possível habilitar o serviço {self.service_name}.", fg="red")
                     self.mark_step(2, False)
                     self.ok_btn.config(state="normal")
                     win32service.CloseServiceHandle(service_handle)
                     win32service.CloseServiceHandle(scm_handle)
                     return
-                self.result_label.config(text=f"Serviço {service_name} habilitado com sucesso.")
+                self.result_label.config(text=f"Serviço {self.service_name} habilitado com sucesso.")
             else:
                 self.mark_step(2)
             self.update()
@@ -224,15 +229,15 @@ class IISInitApp(tk.Tk):
             # Verifica se está rodando
             if serviceStatus[1] != win32service.SERVICE_RUNNING:
                 self.mark_step(3)
-                self.result_label.config(text=f"Inicializando o serviço {service_name}...")
+                self.result_label.config(text=f"Inicializando o serviço {self.service_name}...")
                 self.update()
-                win32serviceutil.StartService(service_name)
+                win32serviceutil.StartService(self.service_name)
                 self.mark_step(4)
-                self.result_label.config(text=f"Serviço {service_name} iniciado com sucesso.", fg="green")
+                self.result_label.config(text=f"Serviço {self.service_name} iniciado com sucesso.", fg="green")
             else:
                 self.mark_step(3)
                 self.mark_step(4)
-                self.result_label.config(text=f"O serviço {service_name} já está em execução.", fg="green")
+                self.result_label.config(text=f"O serviço {self.service_name} já está em execução.", fg="green")
 
             win32service.CloseServiceHandle(service_handle)
             win32service.CloseServiceHandle(scm_handle)
