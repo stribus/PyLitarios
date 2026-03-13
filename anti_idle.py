@@ -31,9 +31,10 @@ class AntiIdle:
         while self.running:
             try:
                 # Simula movimento mínimo do mouse (local e RDP)
+                print("🔄 Simulando movimento do mouse...")
                 x, y = pyautogui.position()
-                pyautogui.move(1, 0, duration=0.1)
-                pyautogui.move(-1, 0, duration=0.1)
+                pyautogui.move(50, 0, duration=0.1)
+                pyautogui.move(-50, 0, duration=0.1)
                 # Impede suspensão local (Windows)
                 try:
                     ES_CONTINUOUS = 0x80000000
@@ -43,11 +44,13 @@ class AntiIdle:
                         ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_DISPLAY_REQUIRED
                     )
                 except Exception:
-                    pass
+                    print("⚠️ Aviso: Falha ao impedir suspensão do sistema.")
+                print("💤 Aguardando próximo ciclo...")
                 time.sleep(50)  # repete a cada 50 segundos
             except Exception as e:
                 # Não interrompe o loop em caso de erro
-                pass
+                print(f"⚠️ Aviso: Ocorreu um erro no loop anti-ociosidade: {e}")
+                time.sleep(5)
 
 class App:
     def __init__(self, root):
